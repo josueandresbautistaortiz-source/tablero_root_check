@@ -89,14 +89,14 @@
     <div class="hidden lg:block p-4 border-t border-slate-800 text-xs text-slate-400 space-y-2">
       <div class="flex items-center justify-between">
         <span>Fuente activa:</span>
-        <span id="sidebar-source-tag" class="text-amber-400 font-semibold">Muestra Base (15 reg.)</span>
+        <span id="sidebar-source-tag" class="text-emerald-400 font-semibold">Google Sheets CSV</span>
       </div>
       <div class="flex items-center justify-between text-[11px]">
         <span>Última sinc.:</span>
-        <span id="sidebar-last-sync" class="text-slate-300 font-mono">—</span>
+        <span id="sidebar-last-sync" class="text-slate-300 font-mono">Sincronizando...</span>
       </div>
       <p class="text-[11px] text-slate-500 leading-relaxed pt-1">
-        Conecta tu enlace CSV publicado de Google Sheets para actualizar todas las métricas automáticamente al abrir.
+        Enlace CSV preconfigurado en el código. Se sincroniza automáticamente al abrir y cada 5 minutos.
       </p>
     </div>
   </aside>
@@ -113,9 +113,9 @@
               <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
                 Root Check — Fast Check Damage Analytics
               </h1>
-              <span id="data-status-badge" class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
-                <i data-lucide="database" class="w-3.5 h-3.5"></i>
-                Datos de muestra
+              <span id="data-status-badge" class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-100 text-blue-900 border border-blue-300">
+                <i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i>
+                Conectando...
               </span>
               <span id="header-sync-time" class="hidden text-xs text-slate-500 font-medium">
                 Actualizado: --:--
@@ -129,21 +129,21 @@
           <!-- Acciones -->
           <div class="flex flex-wrap items-center gap-2.5">
             <!-- Interruptor Auto-refresco (5 min) en barra superior -->
-            <label id="header-autorefresh-wrapper" class="hidden sm:inline-flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 cursor-pointer select-none" title="Actualizar datos automáticamente cada 5 minutos">
+            <label id="header-autorefresh-wrapper" class="inline-flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 cursor-pointer select-none" title="Actualizar datos automáticamente cada 5 minutos">
               <input type="checkbox" id="header-autorefresh-checkbox" checked onchange="toggleHeaderAutoRefresh(this.checked)" class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5">
               <span>Auto (5m)</span>
             </label>
 
             <!-- Botón Sincronizar Ahora -->
-            <button id="btn-sync-now" onclick="syncFromSavedUrl(true)" class="hidden inline-flex items-center gap-2 px-3.5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-all cursor-pointer" title="Descargar datos frescos desde Google Sheets">
+            <button id="btn-sync-now" onclick="syncFromSavedUrl(true)" class="inline-flex items-center gap-2 px-3.5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-all cursor-pointer" title="Descargar datos frescos desde Google Sheets">
               <i id="sync-icon" data-lucide="refresh-cw" class="w-4 h-4"></i>
               <span>Sincronizar ahora</span>
             </button>
 
-            <!-- Botón Principal: Vincular / Configurar Google Sheet -->
+            <!-- Botón Principal: Configurar Google Sheet -->
             <button onclick="openConnectModal()" class="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-all cursor-pointer">
-              <i id="btn-connect-icon" data-lucide="link" class="w-4 h-4"></i>
-              <span id="btn-connect-label">Vincular Google Sheet</span>
+              <i id="btn-connect-icon" data-lucide="settings" class="w-4 h-4"></i>
+              <span id="btn-connect-label">Configurar enlace</span>
             </button>
 
             <button onclick="exportFilteredCSV()" class="inline-flex items-center gap-2 px-3.5 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-medium rounded-xl transition-all cursor-pointer">
@@ -157,28 +157,6 @@
 
     <!-- Cuerpo del Dashboard -->
     <main class="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-
-      <!-- Banner de Bienvenida (Visible solo cuando no hay URL configurada en localStorage) -->
-      <section id="welcome-connect-banner" class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white rounded-2xl p-5 sm:p-6 shadow-md border border-slate-700 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div class="flex items-start gap-4">
-          <div class="p-3 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex-shrink-0">
-            <i data-lucide="cloud-lightning" class="w-6 h-6"></i>
-          </div>
-          <div>
-            <div class="flex items-center gap-2">
-              <h2 class="text-base sm:text-lg font-bold tracking-tight">Conecta tu Google Sheet en vivo</h2>
-              <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">Vista previa activa</span>
-            </div>
-            <p class="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed">
-              Actualmente estás visualizando datos de muestra. Pega tu enlace CSV publicado de <strong class="text-white">Fast check Damage (respuestas)</strong> una sola vez para que este tablero se alimente y sincronice automáticamente al abrir.
-            </p>
-          </div>
-        </div>
-        <button onclick="openConnectModal()" class="inline-flex items-center gap-2 px-5 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs sm:text-sm rounded-xl shadow-sm transition-all whitespace-nowrap cursor-pointer">
-          <i data-lucide="link" class="w-4 h-4"></i>
-          <span>Vincular Google Sheet</span>
-        </button>
-      </section>
 
       <!-- Panel de Filtros Interactivos -->
       <section class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-sm space-y-4">
@@ -528,10 +506,10 @@
           </p>
         </div>
 
-        <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100">
-          <button type="button" onclick="disconnectGoogleSheet()" class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer">
-            <i data-lucide="unlink" class="w-3.5 h-3.5"></i>
-            Desconectar URL
+          <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100">
+          <button type="button" onclick="disconnectGoogleSheet()" class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-50 rounded-xl transition-colors cursor-pointer">
+            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+            Restaurar enlace predeterminado
           </button>
 
           <div class="flex items-center gap-2">
@@ -643,15 +621,424 @@
 
   <script>
     // =========================================================================
+    // 0. CONFIGURACIÓN FIJA PREDETERMINADA (GOOGLE SHEETS CSV PUBLICADO)
+    // =========================================================================
+    const DEFAULT_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQKqyZHYfFbWprZGSPkZaX2fQax-zRBscN98jzGP3BZBIm-GnnMzy0WooX0OBfCOuQiibv_h6c9Nlrr/pub?gid=1606727840&single=true&output=csv";
+    const STORAGE_KEY_URL = "rootcheck_gsheet_csv_url_v1";
+    const STORAGE_KEY_AUTOREFRESH = "rootcheck_gsheet_autorefresh_v1";
+
+    let rawDataset = [];
+    let filteredDataset = [];
+    let currentPage = 1;
+    let pageSize = 15;
+    let autoRefreshTimer = null;
+    let chartInstances = {};
+
+    // =========================================================================
+    // 1. UTILIDADES DE PARSEO Y NORMALIZACIÓN DE COLUMNAS
+    // =========================================================================
+    function getActiveSheetUrl() {
+      const customUrl = localStorage.getItem(STORAGE_KEY_URL);
+      return (customUrl && customUrl.trim()) ? customUrl.trim() : DEFAULT_CSV_URL;
+    }
+
+    function parseCurrency(val) {
+      if (val === null || val === undefined || val === '') return 0;
+      if (typeof val === 'number') return isNaN(val) ? 0 : val;
+      const cleaned = String(val).replace(/[^0-9.-]+/g, '');
+      const num = parseFloat(cleaned);
+      return isNaN(num) ? 0 : num;
+    }
+
+    function parseInteger(val) {
+      if (val === null || val === undefined || val === '') return 0;
+      if (typeof val === 'number') return Math.round(val);
+      const cleaned = String(val).replace(/[^0-9-]+/g, '');
+      const num = parseInt(cleaned, 10);
+      return isNaN(num) ? 0 : num;
+    }
+
+    function formatMXN(amount) {
+      return new Intl.NumberFormat('es-MX', {
+        style: 'currency',
+        currency: 'MXN',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(amount || 0);
+    }
+
+    function formatUSD(amount) {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(amount || 0);
+    }
+
+    function hasOmission360(ccmText) {
+      if (!ccmText) return false;
+      const t = String(ccmText).toLowerCase();
+      return (
+        t.includes('360') &&
+        (t.includes('omiti') || t.includes('no realiz') || t.includes('sin validaci') || t.includes('no se realiz') || t.includes('falta de') || t.includes('no efectu'))
+      );
+    }
+
+    function isCancelledOrTest(row) {
+      const joined = [
+        row.meli, row.is, row.mu, row.responsableCI, row.auditor, row.determinacionCCM, row.tipoDano
+      ].join(' ').toLowerCase();
+      return (
+        joined.includes('qwerth') ||
+        joined.includes('cancelad') ||
+        joined.includes('prueba') ||
+        joined.includes('test')
+      );
+    }
+
+    function getField(obj, candidates) {
+      if (!obj) return '';
+      const keys = Object.keys(obj);
+      for (const cand of candidates) {
+        const candLower = cand.toLowerCase().trim();
+        // Coincidencia exacta ignorando mayúsculas/espacios
+        const exact = keys.find(k => k.toLowerCase().trim() === candLower);
+        if (exact !== undefined && obj[exact] !== undefined && String(obj[exact]).trim() !== '') {
+          return String(obj[exact]).trim();
+        }
+      }
+      for (const cand of candidates) {
+        const candLower = cand.toLowerCase().trim();
+        // Coincidencia parcial
+        const partial = keys.find(k => k.toLowerCase().trim().includes(candLower));
+        if (partial !== undefined && obj[partial] !== undefined && String(obj[partial]).trim() !== '') {
+          return String(obj[partial]).trim();
+        }
+      }
+      return '';
+    }
+
+    function normalizeSheetRow(raw) {
+      const marcaTemporal = getField(raw, ['Marca temporal', 'Timestamp']);
+      const auditor = getField(raw, ['Auditor solicitante ICQA', 'Auditor']) || 'Sin Especificar';
+      const meli = getField(raw, ['Meli del producto', 'Meli']) || 'SIN-MELI';
+      const valorUnitario = parseCurrency(getField(raw, ['Valor unitario del producto MXN', 'Valor unitario']));
+      const piezas = parseInteger(getField(raw, ['Número de piezas', 'Numero de piezas', 'Piezas'])) || 0;
+      const fechaCheckin = getField(raw, ['Fecha de checkin', 'Fecha checkin']);
+      const horaCheckin = getField(raw, ['Hora de checkin', 'Hora checkin']);
+      const responsableCI = getField(raw, ['Nombre del responsable de Checkin', 'Responsable de Checkin', 'Responsable CI']) || 'No registrado';
+      const linea = getField(raw, ['Línea de procesamiento de Checkin', 'Linea de procesamiento de Checkin', 'Línea']) || 'S/L';
+      const mesa = getField(raw, ['Mesa de procesamiento Checkin', 'Mesa']) || '—';
+      const is = getField(raw, ['IS']) || '—';
+      const mu = getField(raw, ['MU origen de Checkin', 'MU origen', 'MU']) || '—';
+      const linkWms = getField(raw, ['Link de movimientos de WMS', 'Movimientos de WMS', 'WMS']);
+      const tipoProductoRaw = getField(raw, ['Tipo de producto (TB/NTB)', 'Tipo de producto']).toUpperCase();
+      const tipoProducto = tipoProductoRaw.includes('NTB') ? 'NTB' : (tipoProductoRaw.includes('TB') ? 'TB' : (tipoProductoRaw || 'N/A'));
+      const linkEvidencia = getField(raw, ['Evidencia fotográfica', 'Evidencia fotografica']);
+      const tipoDano = getField(raw, ['Tipo de daño', 'Tipo de dano']) || 'No clasificado';
+      const tituloCorreo = getField(raw, ['Título del correo', 'Titulo del correo']);
+      const ldap = getField(raw, ['LDAP (Responsable)', 'LDAP']);
+      const mes = getField(raw, ['Mes']);
+      const derivacion = getField(raw, ['Derivación', 'Derivacion']);
+      const determinacionCCM = getField(raw, ['Determinación CCM', 'Determinacion CCM', 'CCM']) || derivacion;
+      const linkCCM = getField(raw, ['Link evidencia CCM', 'Evidencia CCM']);
+      const danoOrigen = getField(raw, ['Daño de origen', 'Dano de origen']);
+      const tl = getField(raw, ['TL', 'Team Leader']) || 'Sin TL';
+      const turno = getField(raw, ['Turno']) || '—';
+      const supervisor = getField(raw, ['Supervisor']);
+      const anio = getField(raw, ['año', 'anio', 'Año']);
+      const wk = getField(raw, ['wk', 'Semana']) || 'S/W';
+
+      let costoTotal = parseCurrency(getField(raw, ['Costo total', 'Costo']));
+      if (costoTotal === 0 && valorUnitario > 0 && piezas > 0) {
+        costoTotal = valorUnitario * piezas;
+      }
+      const usd = parseCurrency(getField(raw, ['USD']));
+
+      return {
+        marcaTemporal,
+        auditor,
+        meli,
+        valorUnitario,
+        piezas,
+        fechaCheckin,
+        horaCheckin,
+        responsableCI,
+        linea,
+        mesa,
+        is,
+        mu,
+        linkWms,
+        tipoProducto,
+        linkEvidencia,
+        tipoDano,
+        tituloCorreo,
+        ldap,
+        ldapMayus: ldap.toUpperCase(),
+        mes,
+        derivacion,
+        determinacionCCM,
+        linkCCM,
+        danoOrigen,
+        tl,
+        turno,
+        supervisor,
+        anio,
+        wk,
+        costoTotal,
+        usd
+      };
+    }
+
+    // =========================================================================
+    // 2. POBLADO DE FILTROS, KPIs Y GRÁFICAS (CHART.JS)
+    // =========================================================================
+    function populateFilterOptions() {
+      const fillSelect = (id, values, defaultLabel, formatter = v => v) => {
+        const select = document.getElementById(id);
+        const currentVal = select.value;
+        const unique = [...new Set(values.filter(Boolean))].sort((a, b) => {
+          const numA = Number(a), numB = Number(b);
+          if (!isNaN(numA) && !isNaN(numB)) return numB - numA;
+          return String(a).localeCompare(String(b), 'es');
+        });
+        select.innerHTML = `<option value="ALL">${defaultLabel}</option>` +
+          unique.map(v => `<option value="${v}">${formatter(v)}</option>`).join('');
+        if (unique.includes(currentVal)) select.value = currentVal;
+      };
+
+      fillSelect('filter-wk', rawDataset.map(r => r.wk), 'Todas las semanas', w => `Semana ${w}`);
+      fillSelect('filter-tipo-producto', rawDataset.map(r => r.tipoProducto), 'Todos (TB / NTB)');
+      fillSelect('filter-tipo-dano', rawDataset.map(r => r.tipoDano), 'Todos los daños');
+      fillSelect('filter-linea', rawDataset.map(r => r.linea), 'Todas las líneas', l => `Línea ${l}`);
+      fillSelect('filter-tl', rawDataset.map(r => r.tl), 'Todos los TLs');
+    }
+
+    function clearAllFilters() {
+      document.getElementById('filter-search').value = '';
+      document.getElementById('filter-wk').value = 'ALL';
+      document.getElementById('filter-tipo-producto').value = 'ALL';
+      document.getElementById('filter-tipo-dano').value = 'ALL';
+      document.getElementById('filter-linea').value = 'ALL';
+      document.getElementById('filter-tl').value = 'ALL';
+      document.getElementById('filter-hide-cancelled').checked = true;
+      applyFilters();
+    }
+
+    function updateKPIs() {
+      const totalMXN = filteredDataset.reduce((acc, r) => acc + r.costoTotal, 0);
+      const totalUSD = filteredDataset.reduce((acc, r) => acc + r.usd, 0);
+      const totalPieces = filteredDataset.reduce((acc, r) => acc + r.piezas, 0);
+      const totalCases = filteredDataset.length;
+      const avgCost = totalCases > 0 ? totalMXN / totalCases : 0;
+
+      const tbPieces = filteredDataset.filter(r => r.tipoProducto === 'TB').reduce((acc, r) => acc + r.piezas, 0);
+      const ntbPieces = filteredDataset.filter(r => r.tipoProducto === 'NTB').reduce((acc, r) => acc + r.piezas, 0);
+
+      const cases360 = filteredDataset.filter(r => hasOmission360(r.determinacionCCM));
+      const pct360 = totalCases > 0 ? Math.round((cases360.length / totalCases) * 100) : 0;
+      const cost360 = cases360.reduce((acc, r) => acc + r.costoTotal, 0);
+
+      // Línea con mayor costo
+      const lineCosts = {};
+      const damageCounts = {};
+      filteredDataset.forEach(r => {
+        lineCosts[r.linea] = (lineCosts[r.linea] || 0) + r.costoTotal;
+        damageCounts[r.tipoDano] = (damageCounts[r.tipoDano] || 0) + 1;
+      });
+
+      const topLineEntry = Object.entries(lineCosts).sort((a, b) => b[1] - a[1])[0];
+      const topDamageEntry = Object.entries(damageCounts).sort((a, b) => b[1] - a[1])[0];
+
+      document.getElementById('kpi-cost-mxn').textContent = formatMXN(totalMXN);
+      document.getElementById('kpi-cost-usd').textContent = `${formatUSD(totalUSD)} USD`;
+      document.getElementById('kpi-avg-cost').textContent = `Prom: ${formatMXN(avgCost)}`;
+
+      document.getElementById('kpi-pieces').textContent = totalPieces.toLocaleString('es-MX');
+      document.getElementById('kpi-cases').textContent = totalCases.toLocaleString('es-MX');
+      document.getElementById('kpi-tb-ntb').textContent = `${tbPieces} TB / ${ntbPieces} NTB`;
+
+      document.getElementById('kpi-360-pct').textContent = `${pct360}%`;
+      document.getElementById('kpi-360-count').textContent = `${cases360.length} casos`;
+      document.getElementById('kpi-360-cost').textContent = `Costo asociado: ${formatMXN(cost360)}`;
+
+      document.getElementById('kpi-top-line').textContent = topLineEntry ? `Línea ${topLineEntry[0]} (${formatMXN(topLineEntry[1])})` : 'Línea —';
+      document.getElementById('kpi-top-damage').textContent = topDamageEntry ? `Daño principal: ${topDamageEntry[0]} (${topDamageEntry[1]})` : 'Daño principal: —';
+    }
+
+    function updateCharts() {
+      // 1. Gráfico Semanal (wk)
+      const wkMap = {};
+      filteredDataset.forEach(r => {
+        const key = r.wk || 'S/W';
+        if (!wkMap[key]) wkMap[key] = { cost: 0, pieces: 0 };
+        wkMap[key].cost += r.costoTotal;
+        wkMap[key].pieces += r.piezas;
+      });
+      const wkLabels = Object.keys(wkMap).sort((a, b) => (Number(a) || 0) - (Number(b) || 0));
+      const wkCosts = wkLabels.map(k => wkMap[k].cost);
+      const wkPieces = wkLabels.map(k => wkMap[k].pieces);
+
+      if (chartInstances.weekly) chartInstances.weekly.destroy();
+      chartInstances.weekly = new Chart(document.getElementById('chart-weekly'), {
+        type: 'bar',
+        data: {
+          labels: wkLabels.map(w => `Wk ${w}`),
+          datasets: [
+            {
+              label: 'Costo Total (MXN)',
+              data: wkCosts,
+              backgroundColor: 'rgba(37, 99, 235, 0.85)',
+              borderRadius: 6,
+              yAxisID: 'y'
+            },
+            {
+              label: 'Piezas Dañadas',
+              data: wkPieces,
+              type: 'line',
+              borderColor: '#f59e0b',
+              backgroundColor: '#f59e0b',
+              borderWidth: 3,
+              tension: 0.3,
+              pointRadius: 4,
+              yAxisID: 'y1'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } } },
+          scales: {
+            y: { type: 'linear', position: 'left', ticks: { callback: v => '$' + v.toLocaleString('es-MX') } },
+            y1: { type: 'linear', position: 'right', grid: { drawOnChartArea: false } }
+          }
+        }
+      });
+
+      // 2. Gráfico Tipo de Daño (Dona)
+      const dmgMap = {};
+      filteredDataset.forEach(r => {
+        dmgMap[r.tipoDano] = (dmgMap[r.tipoDano] || 0) + 1;
+      });
+      const dmgEntries = Object.entries(dmgMap).sort((a, b) => b[1] - a[1]);
+      const palette = ['#2563eb', '#f43f5e', '#f59e0b', '#10b981', '#8b5cf6', '#06b6d4', '#64748b'];
+
+      if (chartInstances.damage) chartInstances.damage.destroy();
+      chartInstances.damage = new Chart(document.getElementById('chart-damage-type'), {
+        type: 'doughnut',
+        data: {
+          labels: dmgEntries.map(e => e[0]),
+          datasets: [{
+            data: dmgEntries.map(e => e[1]),
+            backgroundColor: dmgEntries.map((_, i) => palette[i % palette.length]),
+            borderWidth: 2,
+            borderColor: '#ffffff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '62%',
+          plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 11 } } } }
+        }
+      });
+
+      // Desglose TB vs NTB
+      const tbCases = filteredDataset.filter(r => r.tipoProducto === 'TB');
+      const ntbCases = filteredDataset.filter(r => r.tipoProducto === 'NTB');
+      document.getElementById('product-type-breakdown').innerHTML = `
+        <div class="bg-slate-50 rounded-lg p-2 border border-slate-200/70">
+          <span class="text-slate-500 block text-[10px] font-bold uppercase">TB (Transporte)</span>
+          <strong class="text-slate-900">${tbCases.length} folios · ${formatMXN(tbCases.reduce((a, b) => a + b.costoTotal, 0))}</strong>
+        </div>
+        <div class="bg-purple-50/70 rounded-lg p-2 border border-purple-200/70">
+          <span class="text-purple-700 block text-[10px] font-bold uppercase">NTB (No Transportable)</span>
+          <strong class="text-purple-950">${ntbCases.length} folios · ${formatMXN(ntbCases.reduce((a, b) => a + b.costoTotal, 0))}</strong>
+        </div>
+      `;
+
+      // 3. Costo por Línea de Check-in
+      const lineMap = {};
+      filteredDataset.forEach(r => {
+        lineMap[r.linea] = (lineMap[r.linea] || 0) + r.costoTotal;
+      });
+      const lineEntries = Object.entries(lineMap).sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+      if (chartInstances.lines) chartInstances.lines.destroy();
+      chartInstances.lines = new Chart(document.getElementById('chart-lines'), {
+        type: 'bar',
+        data: {
+          labels: lineEntries.map(e => `Línea ${e[0]}`),
+          datasets: [{
+            label: 'Costo Total (MXN)',
+            data: lineEntries.map(e => e[1]),
+            backgroundColor: '#0f172a',
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { ticks: { callback: v => '$' + v.toLocaleString('es-MX') } }
+          }
+        }
+      });
+
+      // 4. Top Team Leaders (TL)
+      const tlMap = {};
+      filteredDataset.forEach(r => {
+        tlMap[r.tl] = (tlMap[r.tl] || 0) + r.costoTotal;
+      });
+      const tlEntries = Object.entries(tlMap).sort((a, b) => b[1] - a[1]).slice(0, 8);
+
+      if (chartInstances.tl) chartInstances.tl.destroy();
+      chartInstances.tl = new Chart(document.getElementById('chart-tl'), {
+        type: 'bar',
+        data: {
+          labels: tlEntries.map(e => e[0]),
+          datasets: [{
+            label: 'Costo Asociado (MXN)',
+            data: tlEntries.map(e => e[1]),
+            backgroundColor: '#e11d48',
+            borderRadius: 6
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { callback: v => '$' + v.toLocaleString('es-MX') } }
+          }
+        }
+      });
+    }
+
+    // =========================================================================
     // 4. CONEXIÓN AUTOMÁTICA A GOOGLE SHEETS (CSV / APPS SCRIPT)
     // =========================================================================
     function normalizeGoogleSheetUrl(inputUrl) {
-// ... existing code ... -->
+      let url = inputUrl.trim();
+      if (url.includes('/pubhtml')) {
+        url = url.replace('/pubhtml', '/pub');
+        if (!url.includes('output=csv')) {
+          url += (url.includes('?') ? '&' : '?') + 'output=csv';
+        }
+      }
+      return url;
+    }
+
     function openConnectModal() {
-      const savedUrl = localStorage.getItem(STORAGE_KEY_URL) || '';
+      const activeUrl = getActiveSheetUrl();
       const storedAuto = localStorage.getItem(STORAGE_KEY_AUTOREFRESH);
       const autoRefresh = storedAuto === null ? true : storedAuto === 'true';
-      document.getElementById('sheet-url-input').value = savedUrl;
+      document.getElementById('sheet-url-input').value = activeUrl;
       document.getElementById('auto-refresh-toggle').checked = autoRefresh;
       document.getElementById('connect-modal').classList.remove('hidden');
       lucide.createIcons();
@@ -695,22 +1082,11 @@
 
     function disconnectGoogleSheet() {
       localStorage.removeItem(STORAGE_KEY_URL);
-      localStorage.removeItem(STORAGE_KEY_AUTOREFRESH);
-      if (autoRefreshTimer) {
-        clearInterval(autoRefreshTimer);
-        autoRefreshTimer = null;
-      }
-      document.getElementById('sheet-url-input').value = '';
-      document.getElementById('btn-connect-label').textContent = 'Vincular Google Sheet';
-      document.getElementById('btn-connect-icon').setAttribute('data-lucide', 'link');
-      document.getElementById('btn-sync-now').classList.add('hidden');
-      document.getElementById('header-autorefresh-wrapper').classList.add('hidden');
-      document.getElementById('header-sync-time').classList.add('hidden');
-      document.getElementById('welcome-connect-banner').classList.remove('hidden');
-      document.getElementById('sidebar-last-sync').textContent = '—';
+      document.getElementById('sheet-url-input').value = DEFAULT_CSV_URL;
+      setupAutoRefreshTimer();
       closeConnectModal();
-      resetToEmbeddedData();
-      showToast('Enlace desconectado. Mostrando vista previa de muestra.', 'info');
+      syncFromSavedUrl(true);
+      showToast('Enlace predeterminado restaurado.', 'info');
     }
 
     function setupAutoRefreshTimer() {
@@ -718,10 +1094,10 @@
         clearInterval(autoRefreshTimer);
         autoRefreshTimer = null;
       }
-      const savedUrl = localStorage.getItem(STORAGE_KEY_URL);
+      const activeUrl = getActiveSheetUrl();
       const storedAuto = localStorage.getItem(STORAGE_KEY_AUTOREFRESH);
       const isAuto = storedAuto === null ? true : storedAuto === 'true';
-      if (savedUrl && isAuto) {
+      if (activeUrl && isAuto) {
         autoRefreshTimer = setInterval(() => {
           syncFromSavedUrl(false);
         }, 5 * 60 * 1000); // Cada 5 minutos
@@ -729,20 +1105,11 @@
     }
 
     async function syncFromSavedUrl(showSuccessToast = false) {
-      const savedUrl = localStorage.getItem(STORAGE_KEY_URL);
-      if (!savedUrl) return;
+      const activeUrl = getActiveSheetUrl();
+      if (!activeUrl) return;
 
       const syncIcon = document.getElementById('sync-icon');
       const statusBadge = document.getElementById('data-status-badge');
-      const btnSync = document.getElementById('btn-sync-now');
-      const autoWrapper = document.getElementById('header-autorefresh-wrapper');
-      const welcomeBanner = document.getElementById('welcome-connect-banner');
-
-      btnSync.classList.remove('hidden');
-      autoWrapper.classList.remove('hidden');
-      welcomeBanner.classList.add('hidden');
-      document.getElementById('btn-connect-label').textContent = 'Configurar enlace';
-      document.getElementById('btn-connect-icon').setAttribute('data-lucide', 'settings');
       if (syncIcon) syncIcon.classList.add('animate-spin');
 
       statusBadge.className = 'inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-100 text-blue-900 border border-blue-300';
@@ -751,7 +1118,7 @@
 
       try {
         // Añadir anti-caché para forzar lectura fresca de Google Sheets
-        const fetchUrl = new URL(savedUrl);
+        const fetchUrl = new URL(activeUrl);
         fetchUrl.searchParams.set('_t', Date.now().toString());
 
         const response = await fetch(fetchUrl.toString(), { cache: 'no-store' });
@@ -805,25 +1172,11 @@
         console.error('Error sincronizando Google Sheet:', err);
         statusBadge.className = 'inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-rose-100 text-rose-900 border border-rose-300';
         statusBadge.innerHTML = `<i data-lucide="wifi-off" class="w-3.5 h-3.5"></i> Error de conexión`;
-        showToast('No se pudo leer el enlace. Verifica que esté publicado como CSV o intenta recargar.', 'error');
+        showToast('No se pudo leer el enlace CSV. Verifica tu conexión o intenta sincronizar de nuevo.', 'error');
       } finally {
         if (syncIcon) syncIcon.classList.remove('animate-spin');
         lucide.createIcons();
       }
-    }
-
-    function resetToEmbeddedData() {
-      rawDataset = [...REAL_SHEET_DATA];
-      const statusBadge = document.getElementById('data-status-badge');
-      statusBadge.className = 'inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300';
-      statusBadge.innerHTML = `
-        <i data-lucide="database" class="w-3.5 h-3.5"></i>
-        Datos de muestra
-      `;
-      document.getElementById('sidebar-source-tag').textContent = `Muestra (${rawDataset.length} reg.)`;
-      lucide.createIcons();
-      populateFilterOptions();
-      applyFilters();
     }
 
     function applyFilters() {
@@ -1072,6 +1425,14 @@
       configureLink('modal-link-wms', row.linkWms);
       configureLink('modal-link-drive', row.linkEvidencia);
       configureLink('modal-link-ccm', row.linkCCM);
+      document.getElementById('ccm-modal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeModal() {
+      document.getElementById('ccm-modal').classList.add('hidden');
+    }
+
     // Cerrar modales con tecla Escape o clic fuera
     document.getElementById('ccm-modal').addEventListener('click', function (e) {
       if (e.target === this) closeModal();
@@ -1084,9 +1445,6 @@
         closeModal();
         closeConnectModal();
       }
-    });
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') closeModal();
     });
 
     // =========================================================================
@@ -1166,23 +1524,18 @@
     // =========================================================================
     // 10. INICIALIZACIÓN
     // =========================================================================
+    // 10. INICIALIZACIÓN AUTOMÁTICA CON URL FIJA PREDETERMINADA
+    // =========================================================================
     window.addEventListener('DOMContentLoaded', () => {
-      rawDataset = [...REAL_SHEET_DATA];
-      populateFilterOptions();
-      applyFilters();
       lucide.createIcons();
 
-      // Si ya existe una URL guardada en localStorage, sincronizar automáticamente al abrir
-      const savedUrl = localStorage.getItem(STORAGE_KEY_URL);
-      if (savedUrl) {
-        const storedAuto = localStorage.getItem(STORAGE_KEY_AUTOREFRESH);
-        const isAuto = storedAuto === null ? true : storedAuto === 'true';
-        const headerCheckbox = document.getElementById('header-autorefresh-checkbox');
-        if (headerCheckbox) headerCheckbox.checked = isAuto;
+      const storedAuto = localStorage.getItem(STORAGE_KEY_AUTOREFRESH);
+      const isAuto = storedAuto === null ? true : storedAuto === 'true';
+      const headerCheckbox = document.getElementById('header-autorefresh-checkbox');
+      if (headerCheckbox) headerCheckbox.checked = isAuto;
 
-        setupAutoRefreshTimer();
-        syncFromSavedUrl(false);
-      }
+      setupAutoRefreshTimer();
+      syncFromSavedUrl(false);
     });
   </script>
 </body>
