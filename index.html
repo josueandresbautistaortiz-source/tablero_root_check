@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Root Check — Fast Check Damage Analytics</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- SheetJS (xlsx) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f1f5f9;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    .meli-accent {
+      background-color: #FFE600;
+      color: #0F172A;
+    }
+  </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col lg:flex-row">
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Sidebar de Navegación Multi-Tablero -->
+  <aside class="w-full lg:w-64 bg-slate-900 text-slate-200 flex-shrink-0 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-slate-800">
+    <div>
+      <!-- Brand Header -->
+      <div class="p-5 border-b border-slate-800 flex items-center justify-between lg:justify-start gap-3">
+        <div class="flex items-center gap-3">
+          <div class="meli-accent p-2 rounded-xl shadow-sm font-extrabold text-sm tracking-tighter flex items-center justify-center">
+            RC
+          </div>
+          <div>
+            <h2 class="font-bold text-white text-base tracking-tight leading-none">ICQA Analytics</h2>
+            <p class="text-[11px] text-slate-400 mt-1">Control Operativo & Calidad</p>
+          </div>
+        </div>
+        <button id="mobile-menu-btn" onclick="toggleMobileNav()" class="lg:hidden p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800">
+          <i data-lucide="menu" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Menú de Tableros -->
+      <nav id="sidebar-nav" class="hidden lg:block p-4 space-y-1.5">
+        <p class="px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-2">Hojas Conectadas</p>
+        
+        <button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-blue-600/20 text-white border border-blue-500/30 font-medium text-sm text-left transition-all">
+          <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+          <div class="flex-1 truncate">
+            <div class="truncate">Fast Check Damage</div>
+            <div class="text-[11px] text-blue-300 font-normal">Root Check (Respuestas)</div>
+          </div>
+        </button>
+
+        <div class="pt-4">
+          <p class="px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-2">Próximos Tableros</p>
+          <button onclick="showToast('Listo para conectar cuando nos compartas la siguiente hoja de cálculo.', 'info')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 text-sm text-left transition-all border border-dashed border-slate-700/80">
+            <i data-lucide="plus-circle" class="w-4 h-4 text-slate-500"></i>
+            <span class="truncate">Agregar nueva hoja...</span>
+          </button>
+        </div>
+      </nav>
+    </div>
+
+    <!-- Pie del Sidebar -->
+    <div class="hidden lg:block p-4 border-t border-slate-800 text-xs text-slate-400 space-y-2">
+      <div class="flex items-center justify-between">
+        <span>Fuente activa:</span>
+        <span id="sidebar-source-tag" class="text-amber-400 font-semibold">Muestra Base (15 reg.)</span>
+      </div>
+      <div class="flex items-center justify-between text-[11px]">
+        <span>Última sinc.:</span>
+        <span id="sidebar-last-sync" class="text-slate-300 font-mono">—</span>
+      </div>
+      <p class="text-[11px] text-slate-500 leading-relaxed pt-1">
+        Conecta tu enlace CSV publicado de Google Sheets para actualizar todas las métricas automáticamente al abrir.
+      </p>
+    </div>
+  </aside>
+
+  <!-- Contenedor Principal -->
+  <div class="flex-1 flex flex-col min-w-0">
+
+    <!-- Header Superior -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
+      <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div class="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+          <div>
+            <div class="flex flex-wrap items-center gap-2.5">
+              <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+                Root Check — Fast Check Damage Analytics
+              </h1>
+              <span id="data-status-badge" class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
+                <i data-lucide="database" class="w-3.5 h-3.5"></i>
+                Datos de muestra
+              </span>
+              <span id="header-sync-time" class="hidden text-xs text-slate-500 font-medium">
+                Actualizado: --:--
+              </span>
+            </div>
+            <p class="text-xs sm:text-sm text-slate-500 mt-1">
+              Trazabilidad de daños en Inbound Check-in, auditoría ICQA, validación 360° y dictamen CCM.
+            </p>
+          </div>
+
+          <!-- Acciones -->
+          <div class="flex flex-wrap items-center gap-2.5">
+            <!-- Interruptor Auto-refresco (5 min) en barra superior -->
+            <label id="header-autorefresh-wrapper" class="hidden sm:inline-flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 cursor-pointer select-none" title="Actualizar datos automáticamente cada 5 minutos">
+              <input type="checkbox" id="header-autorefresh-checkbox" checked onchange="toggleHeaderAutoRefresh(this.checked)" class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5">
+              <span>Auto (5m)</span>
+            </label>
+
+            <!-- Botón Sincronizar Ahora -->
+            <button id="btn-sync-now" onclick="syncFromSavedUrl(true)" class="hidden inline-flex items-center gap-2 px-3.5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-all cursor-pointer" title="Descargar datos frescos desde Google Sheets">
+              <i id="sync-icon" data-lucide="refresh-cw" class="w-4 h-4"></i>
+              <span>Sincronizar ahora</span>
+            </button>
+
+            <!-- Botón Principal: Vincular / Configurar Google Sheet -->
+            <button onclick="openConnectModal()" class="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-all cursor-pointer">
+              <i id="btn-connect-icon" data-lucide="link" class="w-4 h-4"></i>
+              <span id="btn-connect-label">Vincular Google Sheet</span>
+            </button>
+
+            <button onclick="exportFilteredCSV()" class="inline-flex items-center gap-2 px-3.5 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-medium rounded-xl transition-all cursor-pointer">
+              <i data-lucide="download" class="w-4 h-4 text-blue-600"></i>
+              <span class="hidden sm:inline">Exportar</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Cuerpo del Dashboard -->
+    <main class="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+      <!-- Banner de Bienvenida (Visible solo cuando no hay URL configurada en localStorage) -->
+      <section id="welcome-connect-banner" class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white rounded-2xl p-5 sm:p-6 shadow-md border border-slate-700 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div class="flex items-start gap-4">
+          <div class="p-3 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex-shrink-0">
+            <i data-lucide="cloud-lightning" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="text-base sm:text-lg font-bold tracking-tight">Conecta tu Google Sheet en vivo</h2>
+              <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">Vista previa activa</span>
+            </div>
+            <p class="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed">
+              Actualmente estás visualizando datos de muestra. Pega tu enlace CSV publicado de <strong class="text-white">Fast check Damage (respuestas)</strong> una sola vez para que este tablero se alimente y sincronice automáticamente al abrir.
+            </p>
+          </div>
+        </div>
+        <button onclick="openConnectModal()" class="inline-flex items-center gap-2 px-5 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs sm:text-sm rounded-xl shadow-sm transition-all whitespace-nowrap cursor-pointer">
+          <i data-lucide="link" class="w-4 h-4"></i>
+          <span>Vincular Google Sheet</span>
+        </button>
+      </section>
+
+      <!-- Panel de Filtros Interactivos -->
+      <section class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+          <div class="flex items-center gap-2 text-sm font-bold text-slate-800">
+            <i data-lucide="filter" class="w-4 h-4 text-blue-600"></i>
+            <span>Filtros Operativos</span>
+            <span id="active-records-pill" class="ml-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">
+              0 registros visibles
+            </span>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-4">
+            <label class="inline-flex items-center gap-2 text-xs font-medium text-slate-600 cursor-pointer select-none">
+              <input type="checkbox" id="filter-hide-cancelled" checked onchange="applyFilters()" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4">
+              <span>Ocultar Cancelados / Registros de Prueba</span>
+            </label>
+            <button onclick="clearAllFilters()" class="text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer">
+              Limpiar filtros
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+          <!-- Buscador libre -->
+          <div class="xl:col-span-2">
+            <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Buscar Meli / IS / MU / Responsable</label>
+            <div class="relative">
+              <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+              <input type="text" id="filter-search" oninput="applyFilters()" placeholder="Ej. EMNB93380, MU-TT-RC, SILVERIO..." class="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all">
+            </div>
+          </div>
+
+          <!-- Semana (wk) -->
+          <div>
+            <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Semana (wk)</label>
+            <select id="filter-wk" onchange="applyFilters()" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="ALL">Todas las semanas</option>
+            </select>
+          </div>
+
+          <!-- Tipo de Producto -->
+          <div>
+            <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Tipo Producto</label>
+            <select id="filter-tipo-producto" onchange="applyFilters()" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="ALL">Todos (TB / NTB)</option>
+            </select>
+          </div>
+
+          <!-- Tipo de Daño -->
+          <div>
+            <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Tipo de Daño</label>
+            <select id="filter-tipo-dano" onchange="applyFilters()" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="ALL">Todos los daños</option>
+            </select>
+          </div>
+
+          <!-- Línea Checkin -->
+          <div>
+            <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Línea Check-in</label>
+            <select id="filter-linea" onchange="applyFilters()" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="ALL">Todas las líneas</option>
+            </select>
+          </div>
+
+          <!-- Auditor / TL -->
+          <div>
+            <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Team Leader (TL)</label>
+            <select id="filter-tl" onchange="applyFilters()" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="ALL">Todos los TLs</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tarjetas KPI Ejecutivas -->
+      <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <!-- KPI 1: Impacto Económico -->
+        <div class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm relative overflow-hidden">
+          <div class="flex items-start justify-between">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Impacto Económico Total</p>
+              <p id="kpi-cost-mxn" class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-2">$0.00</p>
+              <div class="flex items-center gap-2 mt-1.5">
+                <span class="text-xs font-semibold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200" id="kpi-cost-usd">
+                  $0.00 USD
+                </span>
+                <span class="text-xs text-slate-400" id="kpi-avg-cost">Prom: $0</span>
+              </div>
+            </div>
+            <div class="p-3 bg-amber-100 text-amber-800 rounded-xl">
+              <i data-lucide="dollar-sign" class="w-6 h-6"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- KPI 2: Piezas Dañadas y Casos -->
+        <div class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm">
+          <div class="flex items-start justify-between">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Piezas Dañadas & Casos</p>
+              <div class="flex items-baseline gap-2.5 mt-2">
+                <p id="kpi-pieces" class="text-2xl sm:text-3xl font-extrabold text-blue-600">0</p>
+                <span class="text-sm font-semibold text-slate-500">piezas</span>
+              </div>
+              <p class="text-xs text-slate-500 mt-1.5">
+                En <span id="kpi-cases" class="font-bold text-slate-700">0</span> folios auditados (<span id="kpi-tb-ntb">0 TB / 0 NTB</span>)
+              </p>
+            </div>
+            <div class="p-3 bg-blue-50 text-blue-600 rounded-xl">
+              <i data-lucide="package-x" class="w-6 h-6"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- KPI 3: Omisión Validación 360° -->
+        <div class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm">
+          <div class="flex items-start justify-between">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Omisión Validación 360°</p>
+              <div class="flex items-baseline gap-2.5 mt-2">
+                <p id="kpi-360-pct" class="text-2xl sm:text-3xl font-extrabold text-rose-600">0%</p>
+                <span id="kpi-360-count" class="text-xs font-semibold px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200">
+                  0 casos
+                </span>
+              </div>
+              <p class="text-xs text-slate-500 mt-1.5 truncate max-w-[230px]" id="kpi-360-cost">
+                Costo asociado: $0.00 MXN
+              </p>
+            </div>
+            <div class="p-3 bg-rose-50 text-rose-600 rounded-xl">
+              <i data-lucide="shield-alert" class="w-6 h-6"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- KPI 4: Punto Crítico (Línea y Daño Principal) -->
+        <div class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm">
+          <div class="flex items-start justify-between">
+            <div class="min-w-0 pr-2">
+              <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Foco Crítico Operativo</p>
+              <p id="kpi-top-line" class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-2 truncate">Línea —</p>
+              <p id="kpi-top-damage" class="text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200/80 rounded-md px-2 py-0.5 mt-1.5 inline-block truncate max-w-full">
+                Daño principal: —
+              </p>
+            </div>
+            <div class="p-3 bg-slate-100 text-slate-700 rounded-xl flex-shrink-0">
+              <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Fila 1 de Gráficos: Evolución Semanal & Distribución por Tipo de Daño / Producto -->
+      <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Gráfico Semanal (2 columnas) -->
+        <div class="lg:col-span-2 bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm flex flex-col">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+            <div>
+              <h3 class="text-base font-bold text-slate-900">Impacto Económico (MXN) y Piezas por Semana (wk)</h3>
+              <p class="text-xs text-slate-500">Comparativo semanal de costo acumulado y volumen de piezas dañadas</p>
+            </div>
+            <span class="text-xs font-medium px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 self-start">MXN vs Piezas</span>
+          </div>
+          <div class="relative h-72 w-full">
+            <canvas id="chart-weekly"></canvas>
+          </div>
+        </div>
+
+        <!-- Gráfico Tipo de Daño & Producto (1 columna) -->
+        <div class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm flex flex-col">
+          <div class="mb-4">
+            <h3 class="text-base font-bold text-slate-900">Distribución por Tipo de Daño</h3>
+            <p class="text-xs text-slate-500">Proporción de casos según hallazgo físico en Check-in</p>
+          </div>
+          <div class="relative h-56 w-full flex items-center justify-center">
+            <canvas id="chart-damage-type"></canvas>
+          </div>
+          <div id="product-type-breakdown" class="mt-4 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs">
+            <!-- Dinámico TB vs NTB -->
+          </div>
+        </div>
+      </section>
+
+      <!-- Fila 2 de Gráficos: Líneas de Check-in & Team Leaders / Auditores -->
+      <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Costo por Línea de Procesamiento Check-in -->
+        <div class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm flex flex-col">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-base font-bold text-slate-900">Costo Total (MXN) por Línea de Check-in</h3>
+              <p class="text-xs text-slate-500">Identificación de líneas de procesamiento con mayor merma</p>
+            </div>
+            <i data-lucide="git-commit" class="w-5 h-5 text-slate-400"></i>
+          </div>
+          <div class="relative h-72 w-full">
+            <canvas id="chart-lines"></canvas>
+          </div>
+        </div>
+
+        <!-- Top Team Leaders (TL) por Impacto Económico -->
+        <div class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm flex flex-col">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-base font-bold text-slate-900">Top Team Leaders (TL) por Costo Asociado</h3>
+              <p class="text-xs text-slate-500">Costo acumulado (MXN) en equipos de Check-in auditados</p>
+            </div>
+            <i data-lucide="users" class="w-5 h-5 text-slate-400"></i>
+          </div>
+          <div class="relative h-72 w-full">
+            <canvas id="chart-tl"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tabla Detallada de Registros y Trazabilidad -->
+      <section class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 class="text-base font-bold text-slate-900">Detalle de Casos Auditados y Trazabilidad CCM</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Haz clic en <span class="font-semibold text-slate-700">"CCM"</span> para leer la investigación completa, validación 360° y enlaces.</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+            <div class="flex items-center gap-1.5">
+              <span>Filas:</span>
+              <select id="page-size-select" onchange="changePageSize()" class="px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 font-medium focus:outline-none">
+                <option value="15">15</option>
+                <option value="30">30</option>
+                <option value="50">50</option>
+                <option value="200">Todas (200)</option>
+              </select>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span>Ordenar:</span>
+              <select id="sort-select" onchange="applyFilters()" class="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 font-medium focus:outline-none">
+                <option value="date_desc">Más reciente</option>
+                <option value="cost_desc">Costo MXN (Mayor a menor)</option>
+                <option value="pieces_desc">Piezas (Mayor a menor)</option>
+                <option value="wk_desc">Semana (wk)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                <th class="py-3.5 px-4">Fecha / wk</th>
+                <th class="py-3.5 px-4">Meli / IS</th>
+                <th class="py-3.5 px-4">Prod / Daño</th>
+                <th class="py-3.5 px-4 text-center">Línea / Mesa</th>
+                <th class="py-3.5 px-4 text-right">Piezas</th>
+                <th class="py-3.5 px-4 text-right">Costo MXN / USD</th>
+                <th class="py-3.5 px-4">Responsable CI & TL</th>
+                <th class="py-3.5 px-4">Validación 360°</th>
+                <th class="py-3.5 px-4 text-center">Evidencias & CCM</th>
+              </tr>
+            </thead>
+            <tbody id="records-table-body" class="divide-y divide-slate-100 text-sm">
+              <!-- Filas generadas dinámicamente -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Controles de Paginación -->
+        <div id="pagination-bar" class="px-5 py-3.5 bg-slate-50/70 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">
+          <div id="pagination-info">Mostrando 0 - 0 de 0 registros</div>
+          <div class="flex items-center gap-2">
+            <button id="btn-prev-page" onclick="prevPage()" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 disabled:opacity-40 disabled:pointer-events-none font-semibold transition-colors cursor-pointer">
+              Anterior
+            </button>
+            <span id="pagination-page-label" class="font-bold text-slate-800 px-2">Página 1 de 1</span>
+            <button id="btn-next-page" onclick="nextPage()" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 disabled:opacity-40 disabled:pointer-events-none font-semibold transition-colors cursor-pointer">
+              Siguiente
+            </button>
+          </div>
+        </div>
+
+        <!-- Estado vacío -->
+        <div id="empty-state" class="hidden py-12 px-4 text-center">
+          <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-slate-100 text-slate-400 mb-3">
+            <i data-lucide="search-x" class="w-6 h-6"></i>
+          </div>
+          <h4 class="text-sm font-bold text-slate-800">No se encontraron registros con los filtros actuales</h4>
+          <p class="text-xs text-slate-500 mt-1">Intenta limpiar los filtros o desmarcar la opción de ocultar cancelados.</p>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Modal: Conectar Google Sheet Automático -->
+  <div id="connect-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-xl w-full shadow-2xl border border-slate-200 overflow-hidden my-8">
+      <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+            <i data-lucide="sheet" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-base sm:text-lg leading-tight">Conexión Automática Google Sheets</h3>
+            <p class="text-xs text-slate-400 mt-0.5">Sincroniza tus respuestas sin subir archivos manualmente</p>
+          </div>
+        </div>
+        <button onclick="closeConnectModal()" class="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-5">
+        <div>
+          <label for="sheet-url-input" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+            Enlace CSV Publicado o URL de Apps Script (/exec)
+          </label>
+          <input
+            type="url"
+            id="sheet-url-input"
+            placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?gid=...&single=true&output=csv"
+            class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white font-mono text-slate-800"
+          />
+          <p class="text-[11px] text-slate-500 mt-1.5 leading-relaxed">
+            La URL se guarda únicamente en este navegador (<code class="text-slate-700">localStorage</code>). Cada vez que abras o recargues la página, los datos se actualizarán solos.
+          </p>
+        </div>
+
+        <!-- Opción Auto-refresco -->
+        <div class="flex items-center justify-between bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
+          <div>
+            <p class="text-xs font-bold text-slate-800">Auto-sincronización periódica</p>
+            <p class="text-[11px] text-slate-500">Actualizar automáticamente cada 5 minutos mientras la pestaña esté abierta</p>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="auto-refresh-toggle" class="sr-only peer">
+            <div class="w-10 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+          </label>
+        </div>
+
+        <!-- Guía rápida -->
+        <div class="bg-blue-50/70 border border-blue-200/80 rounded-xl p-3.5 text-xs text-slate-700 space-y-1">
+          <p class="font-bold text-blue-900 flex items-center gap-1.5">
+            <i data-lucide="info" class="w-3.5 h-3.5 text-blue-600"></i>
+            Nota sobre el enlace CSV de Google Sheets:
+          </p>
+          <p class="text-[11px] text-slate-600 leading-relaxed">
+            Si pegaste un enlace terminado en <code class="bg-white px-1 rounded">pubhtml</code>, el tablero lo convertirá automáticamente a <code class="bg-white px-1 rounded">output=csv</code> y soportará saltos de línea dentro de la columna <em>Determinación CCM</em>.
+          </p>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100">
+          <button type="button" onclick="disconnectGoogleSheet()" class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer">
+            <i data-lucide="unlink" class="w-3.5 h-3.5"></i>
+            Desconectar URL
+          </button>
+
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="closeConnectModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer">
+              Cancelar
+            </button>
+            <button type="button" onclick="saveAndConnectSheet()" class="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all cursor-pointer">
+              <i data-lucide="check" class="w-4 h-4"></i>
+              Guardar y Sincronizar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Trazabilidad Completa y Dictamen CCM -->
+  <div id="ccm-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-3xl w-full shadow-2xl border border-slate-200 overflow-hidden my-8 animate-fade-in">
+      <!-- Header Modal -->
+      <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="meli-accent px-2.5 py-1 rounded-lg font-bold text-xs">CCM</div>
+          <div>
+            <h3 id="modal-title" class="font-bold text-base sm:text-lg leading-tight">Detalle de Trazabilidad</h3>
+            <p id="modal-subtitle" class="text-xs text-slate-400 mt-0.5">Meli — IS — MU</p>
+          </div>
+        </div>
+        <button onclick="closeModal()" class="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Body Modal -->
+      <div class="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+        <!-- Resumen Financiero y Operativo -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200/80">
+          <div>
+            <span class="text-[11px] font-semibold uppercase text-slate-400 block">Costo Total MXN</span>
+            <span id="modal-cost-mxn" class="text-base font-extrabold text-slate-900">$0.00</span>
+          </div>
+          <div>
+            <span class="text-[11px] font-semibold uppercase text-slate-400 block">Costo USD</span>
+            <span id="modal-cost-usd" class="text-base font-bold text-emerald-700">$0.00</span>
+          </div>
+          <div>
+            <span class="text-[11px] font-semibold uppercase text-slate-400 block">Piezas / Unitario</span>
+            <span id="modal-pieces" class="text-sm font-bold text-slate-800">0 pzas</span>
+          </div>
+          <div>
+            <span class="text-[11px] font-semibold uppercase text-slate-400 block">Línea / Mesa / Turno</span>
+            <span id="modal-line" class="text-sm font-bold text-slate-800">Línea —</span>
+          </div>
+        </div>
+
+        <!-- Metadatos del Proceso -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+          <div class="space-y-2 border border-slate-100 rounded-xl p-3.5">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">Datos de Recepción (Check-in)</h4>
+            <p><span class="text-slate-500">Responsable CI:</span> <strong id="modal-resp-ci" class="text-slate-800">—</strong></p>
+            <p><span class="text-slate-500">LDAP:</span> <strong id="modal-ldap" class="text-slate-800">—</strong></p>
+            <p><span class="text-slate-500">Team Leader (TL):</span> <strong id="modal-tl" class="text-slate-800">—</strong></p>
+            <p><span class="text-slate-500">Fecha/Hora CI:</span> <strong id="modal-ci-datetime" class="text-slate-800">—</strong></p>
+            <p><span class="text-slate-500">MU Origen:</span> <code id="modal-mu" class="text-xs bg-slate-100 px-1.5 py-0.5 rounded font-mono text-slate-800">—</code></p>
+          </div>
+
+          <div class="space-y-2 border border-slate-100 rounded-xl p-3.5">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">Auditoría ICQA</h4>
+            <p><span class="text-slate-500">Auditor ICQA:</span> <strong id="modal-auditor" class="text-slate-800">—</strong></p>
+            <p><span class="text-slate-500">Tipo Producto:</span> <strong id="modal-tipo-prod" class="text-slate-800">—</strong></p>
+            <p><span class="text-slate-500">Tipo de Daño:</span> <strong id="modal-tipo-dano" class="text-rose-700">—</strong></p>
+            <p><span class="text-slate-500">Semana / Año:</span> <strong id="modal-wk" class="text-slate-800">—</strong></p>
+            <p><span class="text-slate-500">Título Correo:</span> <span id="modal-email" class="text-xs text-slate-700 block mt-0.5 italic">—</span></p>
+          </div>
+        </div>
+
+        <!-- Dictamen CCM Completo -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+              <i data-lucide="file-search" class="w-4 h-4 text-blue-600"></i>
+              Derivación / Determinación CCM
+            </h4>
+            <span id="modal-360-badge" class="text-xs font-semibold px-2.5 py-0.5 rounded-full"></span>
+          </div>
+          <div id="modal-ccm-text" class="bg-amber-50/60 border border-amber-200/80 rounded-xl p-4 text-sm text-slate-800 leading-relaxed whitespace-pre-line">
+            Sin dictamen registrado.
+          </div>
+        </div>
+
+        <!-- Enlaces Directos -->
+        <div class="flex flex-wrap items-center gap-3 pt-2 border-t border-slate-100">
+          <a id="modal-link-wms" href="#" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl transition-colors">
+            <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+            Abrir Movimientos WMS
+          </a>
+          <a id="modal-link-drive" href="#" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold rounded-xl transition-colors">
+            <i data-lucide="camera" class="w-3.5 h-3.5 text-amber-400"></i>
+            Evidencia Fotográfica (Drive)
+          </a>
+          <a id="modal-link-ccm" href="#" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl transition-colors">
+            <i data-lucide="file-check" class="w-3.5 h-3.5"></i>
+            Evidencia CCM
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 4. CONEXIÓN AUTOMÁTICA A GOOGLE SHEETS (CSV / APPS SCRIPT)
+    // =========================================================================
+    function normalizeGoogleSheetUrl(inputUrl) {
+// ... existing code ... -->
+    function openConnectModal() {
+      const savedUrl = localStorage.getItem(STORAGE_KEY_URL) || '';
+      const storedAuto = localStorage.getItem(STORAGE_KEY_AUTOREFRESH);
+      const autoRefresh = storedAuto === null ? true : storedAuto === 'true';
+      document.getElementById('sheet-url-input').value = savedUrl;
+      document.getElementById('auto-refresh-toggle').checked = autoRefresh;
+      document.getElementById('connect-modal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeConnectModal() {
+      document.getElementById('connect-modal').classList.add('hidden');
+    }
+
+    function toggleHeaderAutoRefresh(isChecked) {
+      localStorage.setItem(STORAGE_KEY_AUTOREFRESH, String(isChecked));
+      const modalToggle = document.getElementById('auto-refresh-toggle');
+      if (modalToggle) modalToggle.checked = isChecked;
+      setupAutoRefreshTimer();
+      showToast(
+        isChecked ? 'Auto-refresco cada 5 minutos activado.' : 'Auto-refresco periódico desactivado.',
+        'info'
+      );
+    }
+
+    function saveAndConnectSheet() {
+      const rawInput = document.getElementById('sheet-url-input').value.trim();
+      const autoRefresh = document.getElementById('auto-refresh-toggle').checked;
+
+      if (!rawInput) {
+        showToast('Por favor pega el enlace CSV publicado de Google Sheets.', 'error');
+        return;
+      }
+
+      const normalizedUrl = normalizeGoogleSheetUrl(rawInput);
+      localStorage.setItem(STORAGE_KEY_URL, normalizedUrl);
+      localStorage.setItem(STORAGE_KEY_AUTOREFRESH, String(autoRefresh));
+
+      const headerCheckbox = document.getElementById('header-autorefresh-checkbox');
+      if (headerCheckbox) headerCheckbox.checked = autoRefresh;
+
+      setupAutoRefreshTimer();
+      closeConnectModal();
+      syncFromSavedUrl(true);
+    }
+
+    function disconnectGoogleSheet() {
+      localStorage.removeItem(STORAGE_KEY_URL);
+      localStorage.removeItem(STORAGE_KEY_AUTOREFRESH);
+      if (autoRefreshTimer) {
+        clearInterval(autoRefreshTimer);
+        autoRefreshTimer = null;
+      }
+      document.getElementById('sheet-url-input').value = '';
+      document.getElementById('btn-connect-label').textContent = 'Vincular Google Sheet';
+      document.getElementById('btn-connect-icon').setAttribute('data-lucide', 'link');
+      document.getElementById('btn-sync-now').classList.add('hidden');
+      document.getElementById('header-autorefresh-wrapper').classList.add('hidden');
+      document.getElementById('header-sync-time').classList.add('hidden');
+      document.getElementById('welcome-connect-banner').classList.remove('hidden');
+      document.getElementById('sidebar-last-sync').textContent = '—';
+      closeConnectModal();
+      resetToEmbeddedData();
+      showToast('Enlace desconectado. Mostrando vista previa de muestra.', 'info');
+    }
+
+    function setupAutoRefreshTimer() {
+      if (autoRefreshTimer) {
+        clearInterval(autoRefreshTimer);
+        autoRefreshTimer = null;
+      }
+      const savedUrl = localStorage.getItem(STORAGE_KEY_URL);
+      const storedAuto = localStorage.getItem(STORAGE_KEY_AUTOREFRESH);
+      const isAuto = storedAuto === null ? true : storedAuto === 'true';
+      if (savedUrl && isAuto) {
+        autoRefreshTimer = setInterval(() => {
+          syncFromSavedUrl(false);
+        }, 5 * 60 * 1000); // Cada 5 minutos
+      }
+    }
+
+    async function syncFromSavedUrl(showSuccessToast = false) {
+      const savedUrl = localStorage.getItem(STORAGE_KEY_URL);
+      if (!savedUrl) return;
+
+      const syncIcon = document.getElementById('sync-icon');
+      const statusBadge = document.getElementById('data-status-badge');
+      const btnSync = document.getElementById('btn-sync-now');
+      const autoWrapper = document.getElementById('header-autorefresh-wrapper');
+      const welcomeBanner = document.getElementById('welcome-connect-banner');
+
+      btnSync.classList.remove('hidden');
+      autoWrapper.classList.remove('hidden');
+      welcomeBanner.classList.add('hidden');
+      document.getElementById('btn-connect-label').textContent = 'Configurar enlace';
+      document.getElementById('btn-connect-icon').setAttribute('data-lucide', 'settings');
+      if (syncIcon) syncIcon.classList.add('animate-spin');
+
+      statusBadge.className = 'inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-100 text-blue-900 border border-blue-300';
+      statusBadge.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> Sincronizando...`;
+      lucide.createIcons();
+
+      try {
+        // Añadir anti-caché para forzar lectura fresca de Google Sheets
+        const fetchUrl = new URL(savedUrl);
+        fetchUrl.searchParams.set('_t', Date.now().toString());
+
+        const response = await fetch(fetchUrl.toString(), { cache: 'no-store' });
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const rawText = await response.text();
+        let jsonRows = [];
+
+        // Soportar respuesta JSON (Apps Script) o CSV (Publicar en la web)
+        const trimmed = rawText.trim();
+        if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+          const parsedJson = JSON.parse(trimmed);
+          jsonRows = Array.isArray(parsedJson) ? parsedJson : (parsedJson.data || []);
+        } else {
+          // Usar SheetJS para parsear CSV respetando UTF-8 y saltos de línea dentro de comillas
+          const workbook = XLSX.read(rawText, { type: 'string', raw: false });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          jsonRows = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
+        }
+
+        const mapped = jsonRows
+          .map(normalizeSheetRow)
+          .filter(r => r.meli !== 'SIN-MELI' || r.costoTotal > 0 || r.auditor !== 'Sin Especificar');
+
+        if (mapped.length === 0) {
+          throw new Error('No se encontraron filas válidas en el origen.');
+        }
+
+        rawDataset = mapped;
+        const nowTime = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+        statusBadge.className = 'inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300';
+        statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span> Conectado a Google Sheets en vivo (${mapped.length})`;
+
+        const headerTimeEl = document.getElementById('header-sync-time');
+        headerTimeEl.textContent = `Última actualización: ${nowTime}`;
+        headerTimeEl.classList.remove('hidden');
+
+        document.getElementById('sidebar-source-tag').textContent = `En vivo (${mapped.length} reg.)`;
+        document.getElementById('sidebar-last-sync').textContent = nowTime;
+
+        populateFilterOptions();
+        applyFilters();
+
+        if (showSuccessToast) {
+          showToast(`Sincronizado: ${mapped.length} registros cargados desde Google Sheets.`, 'success');
+        }
+      } catch (err) {
+        console.error('Error sincronizando Google Sheet:', err);
+        statusBadge.className = 'inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-rose-100 text-rose-900 border border-rose-300';
+        statusBadge.innerHTML = `<i data-lucide="wifi-off" class="w-3.5 h-3.5"></i> Error de conexión`;
+        showToast('No se pudo leer el enlace. Verifica que esté publicado como CSV o intenta recargar.', 'error');
+      } finally {
+        if (syncIcon) syncIcon.classList.remove('animate-spin');
+        lucide.createIcons();
+      }
+    }
+
+    function resetToEmbeddedData() {
+      rawDataset = [...REAL_SHEET_DATA];
+      const statusBadge = document.getElementById('data-status-badge');
+      statusBadge.className = 'inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300';
+      statusBadge.innerHTML = `
+        <i data-lucide="database" class="w-3.5 h-3.5"></i>
+        Datos de muestra
+      `;
+      document.getElementById('sidebar-source-tag').textContent = `Muestra (${rawDataset.length} reg.)`;
+      lucide.createIcons();
+      populateFilterOptions();
+      applyFilters();
+    }
+
+    function applyFilters() {
+      const search = document.getElementById('filter-search').value.trim().toLowerCase();
+      const wk = document.getElementById('filter-wk').value;
+      const tipoProd = document.getElementById('filter-tipo-producto').value;
+      const tipoDano = document.getElementById('filter-tipo-dano').value;
+      const linea = document.getElementById('filter-linea').value;
+      const tl = document.getElementById('filter-tl').value;
+      const hideCancelled = document.getElementById('filter-hide-cancelled').checked;
+      const sortBy = document.getElementById('sort-select').value;
+
+      filteredDataset = rawDataset.filter(item => {
+        if (hideCancelled && isCancelledOrTest(item)) return false;
+        if (wk !== 'ALL' && item.wk !== wk) return false;
+        if (tipoProd !== 'ALL' && item.tipoProducto !== tipoProd) return false;
+        if (tipoDano !== 'ALL' && item.tipoDano !== tipoDano) return false;
+        if (linea !== 'ALL' && item.linea !== linea) return false;
+        if (tl !== 'ALL' && item.tl !== tl) return false;
+
+        if (search) {
+          const haystack = [
+            item.meli,
+            item.is,
+            item.mu,
+            item.responsableCI,
+            item.auditor,
+            item.tl,
+            item.ldap
+          ].join(' ').toLowerCase();
+          if (!haystack.includes(search)) return false;
+        }
+        return true;
+      });
+
+      // Ordenamiento
+      filteredDataset.sort((a, b) => {
+        if (sortBy === 'cost_desc') return b.costoTotal - a.costoTotal;
+        if (sortBy === 'pieces_desc') return b.piezas - a.piezas;
+        if (sortBy === 'wk_desc') return (Number(b.wk) || 0) - (Number(a.wk) || 0);
+        return 0;
+      });
+
+      currentPage = 1;
+      document.getElementById('active-records-pill').textContent = `${filteredDataset.length} registros visibles`;
+
+      updateKPIs();
+      updateCharts();
+      renderTable();
+    }
+
+    // =========================================================================
+    // 8. RENDERIZADO DE TABLA CON PAGINACIÓN Y MODAL CCM
+    // =========================================================================
+    function changePageSize() {
+      pageSize = parseInt(document.getElementById('page-size-select').value, 10) || 15;
+      currentPage = 1;
+      renderTable();
+    }
+
+    function prevPage() {
+      if (currentPage > 1) {
+        currentPage--;
+        renderTable();
+      }
+    }
+
+    function nextPage() {
+      const totalPages = Math.max(1, Math.ceil(filteredDataset.length / pageSize));
+      if (currentPage < totalPages) {
+        currentPage++;
+        renderTable();
+      }
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('records-table-body');
+      const emptyState = document.getElementById('empty-state');
+      const paginationBar = document.getElementById('pagination-bar');
+
+      if (filteredDataset.length === 0) {
+        tbody.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        paginationBar.classList.add('hidden');
+        return;
+      }
+      emptyState.classList.add('hidden');
+      paginationBar.classList.remove('hidden');
+
+      const totalItems = filteredDataset.length;
+      const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+      if (currentPage > totalPages) currentPage = totalPages;
+
+      const startIdx = (currentPage - 1) * pageSize;
+      const endIdx = Math.min(startIdx + pageSize, totalItems);
+      const pageSlice = filteredDataset.slice(startIdx, endIdx);
+
+      document.getElementById('pagination-info').textContent = `Mostrando ${startIdx + 1} - ${endIdx} de ${totalItems} registros`;
+      document.getElementById('pagination-page-label').textContent = `Página ${currentPage} de ${totalPages}`;
+      document.getElementById('btn-prev-page').disabled = currentPage <= 1;
+      document.getElementById('btn-next-page').disabled = currentPage >= totalPages;
+
+      tbody.innerHTML = pageSlice.map((row, sliceIdx) => {
+        const globalIdx = startIdx + sliceIdx;
+        const omit360 = hasOmission360(row.determinacionCCM);
+        const cancelled = isCancelledOrTest(row);
+
+        const damageBadgeClass = row.tipoDano.toLowerCase().includes('roto')
+          ? 'bg-rose-50 text-rose-700 border-rose-200'
+          : row.tipoDano.toLowerCase().includes('sello')
+            ? 'bg-amber-50 text-amber-800 border-amber-200'
+            : 'bg-blue-50 text-blue-700 border-blue-200';
+
+        const prodBadgeClass = row.tipoProducto === 'NTB'
+          ? 'bg-purple-100 text-purple-800'
+          : 'bg-slate-200 text-slate-800';
+
+        return `
+          <tr class="hover:bg-slate-50/90 transition-colors ${cancelled ? 'opacity-60 bg-slate-50' : ''}">
+            <td class="py-3.5 px-4 whitespace-nowrap">
+              <div class="font-semibold text-slate-800 text-xs">${row.fechaCheckin || row.marcaTemporal.split(' ')[0]}</div>
+              <span class="inline-block mt-0.5 text-[11px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+                Wk ${row.wk} · ${row.turno}
+              </span>
+            </td>
+
+            <td class="py-3.5 px-4">
+              <div class="font-bold text-slate-900 font-mono text-xs">${row.meli}</div>
+              <div class="text-[11px] text-slate-500 mt-0.5">IS: <span class="font-medium text-slate-700">${row.is}</span></div>
+              <div class="text-[10px] text-slate-400 font-mono truncate max-w-[145px]" title="${row.mu}">${row.mu}</div>
+            </td>
+
+            <td class="py-3.5 px-4">
+              <div class="flex items-center gap-1.5 mb-1">
+                <span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded ${prodBadgeClass}">${row.tipoProducto}</span>
+                ${cancelled ? '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-100 text-rose-700">CANCELADO</span>' : ''}
+              </div>
+              <span class="inline-block text-xs font-medium px-2 py-0.5 rounded-md border ${damageBadgeClass}">
+                ${row.tipoDano}
+              </span>
+            </td>
+
+            <td class="py-3.5 px-4 text-center whitespace-nowrap">
+              <div class="font-bold text-slate-800 text-xs">Línea ${row.linea}</div>
+              <div class="text-[11px] text-slate-500">Mesa ${row.mesa}</div>
+            </td>
+
+            <td class="py-3.5 px-4 text-right whitespace-nowrap">
+              <span class="font-extrabold text-slate-900 text-sm">${row.piezas}</span>
+              <div class="text-[10px] text-slate-400">${formatMXN(row.valorUnitario)} c/u</div>
+            </td>
+
+            <td class="py-3.5 px-4 text-right whitespace-nowrap">
+              <div class="font-extrabold text-slate-900 text-sm">${formatMXN(row.costoTotal)}</div>
+              <div class="text-[11px] font-medium text-emerald-700">${formatUSD(row.usd)} USD</div>
+            </td>
+
+            <td class="py-3.5 px-4 max-w-[210px]">
+              <div class="text-xs font-semibold text-slate-800 truncate" title="${row.responsableCI}">${row.responsableCI}</div>
+              <div class="text-[11px] text-slate-500 truncate mt-0.5" title="TL: ${row.tl}">TL: ${row.tl}</div>
+              <div class="text-[10px] text-blue-600 truncate mt-0.5">ICQA: ${row.auditor}</div>
+            </td>
+
+            <td class="py-3.5 px-4 whitespace-nowrap">
+              ${omit360
+                ? `<span class="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-rose-100 text-rose-800 border border-rose-200">
+                     <i data-lucide="alert-circle" class="w-3 h-3"></i> Omitió 360°
+                   </span>`
+                : `<span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">
+                     Origen / Otro
+                   </span>`
+              }
+            </td>
+
+            <td class="py-3.5 px-4 text-center whitespace-nowrap">
+              <div class="inline-flex items-center gap-1.5">
+                <button onclick="openModal(${globalIdx})" class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer" title="Ver Determinación CCM">
+                  <i data-lucide="file-text" class="w-3.5 h-3.5 text-amber-400"></i>
+                  <span>CCM</span>
+                </button>
+                ${row.linkEvidencia ? `
+                  <a href="${row.linkEvidencia}" target="_blank" rel="noopener noreferrer" class="p-1.5 bg-slate-100 hover:bg-blue-100 text-slate-700 hover:text-blue-700 rounded-lg transition-colors" title="Ver Evidencia Fotográfica">
+                    <i data-lucide="camera" class="w-4 h-4"></i>
+                  </a>
+                ` : ''}
+                ${row.linkWms ? `
+                  <a href="${row.linkWms}" target="_blank" rel="noopener noreferrer" class="p-1.5 bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-800 rounded-lg transition-colors" title="Movimientos WMS">
+                    <i data-lucide="external-link" class="w-4 h-4"></i>
+                  </a>
+                ` : ''}
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    function openModal(index) {
+      const row = filteredDataset[index];
+      if (!row) return;
+
+      document.getElementById('modal-title').textContent = `Trazabilidad: ${row.meli} (${row.tipoProducto})`;
+      document.getElementById('modal-subtitle').textContent = `IS: ${row.is} · MU Origen: ${row.mu}`;
+
+      document.getElementById('modal-cost-mxn').textContent = formatMXN(row.costoTotal);
+      document.getElementById('modal-cost-usd').textContent = `${formatUSD(row.usd)} USD`;
+      document.getElementById('modal-pieces').textContent = `${row.piezas} pzas (${formatMXN(row.valorUnitario)})`;
+      document.getElementById('modal-line').textContent = `Línea ${row.linea} · Mesa ${row.mesa} (${row.turno})`;
+
+      document.getElementById('modal-resp-ci').textContent = row.responsableCI;
+      document.getElementById('modal-ldap').textContent = row.ldapMayus || row.ldap || '—';
+      document.getElementById('modal-tl').textContent = row.tl;
+      document.getElementById('modal-ci-datetime').textContent = `${row.fechaCheckin} ${row.horaCheckin}`;
+      document.getElementById('modal-mu').textContent = row.mu;
+
+      document.getElementById('modal-auditor').textContent = row.auditor;
+      document.getElementById('modal-tipo-prod').textContent = row.tipoProducto;
+      document.getElementById('modal-tipo-dano').textContent = row.tipoDano;
+      document.getElementById('modal-wk').textContent = `Semana ${row.wk} · Mes ${row.mes}/${row.anio}`;
+      document.getElementById('modal-email').textContent = row.tituloCorreo || 'Sin asunto registrado';
+
+      document.getElementById('modal-ccm-text').textContent = row.determinacionCCM || 'Sin dictamen CCM capturado en la hoja.';
+
+      const badge360 = document.getElementById('modal-360-badge');
+      if (hasOmission360(row.determinacionCCM)) {
+        badge360.textContent = 'Omisión Validación 360° Detectada';
+        badge360.className = 'text-xs font-bold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-200';
+      } else {
+        badge360.textContent = 'Sin omisión 360° explícita';
+        badge360.className = 'text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600';
+      }
+
+      const configureLink = (elId, url) => {
+        const el = document.getElementById(elId);
+        if (url && url.startsWith('http')) {
+          el.href = url;
+          el.classList.remove('opacity-40', 'pointer-events-none');
+        } else {
+          el.href = '#';
+          el.classList.add('opacity-40', 'pointer-events-none');
+        }
+      };
+
+      configureLink('modal-link-wms', row.linkWms);
+      configureLink('modal-link-drive', row.linkEvidencia);
+      configureLink('modal-link-ccm', row.linkCCM);
+    // Cerrar modales con tecla Escape o clic fuera
+    document.getElementById('ccm-modal').addEventListener('click', function (e) {
+      if (e.target === this) closeModal();
+    });
+    document.getElementById('connect-modal').addEventListener('click', function (e) {
+      if (e.target === this) closeConnectModal();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        closeModal();
+        closeConnectModal();
+      }
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    // =========================================================================
+    // 9. EXPORTACIÓN CSV Y UTILIDADES UI
+    // =========================================================================
+    function exportFilteredCSV() {
+      if (filteredDataset.length === 0) {
+        showToast('No hay registros visibles para exportar.', 'error');
+        return;
+      }
+
+      const headers = [
+        'Marca temporal', 'Semana (wk)', 'Auditor ICQA', 'Meli', 'Tipo Producto',
+        'Tipo de Daño', 'Piezas', 'Valor Unitario MXN', 'Costo Total MXN', 'USD',
+        'IS', 'MU Origen', 'Línea Check-in', 'Mesa', 'Responsable Check-in',
+        'LDAP', 'Team Leader (TL)', 'Turno', 'Omisión 360°', 'Determinación CCM'
+      ];
+
+      const csvRows = [
+        headers.join(','),
+        ...filteredDataset.map(r => [
+          `"${r.marcaTemporal}"`,
+          `"${r.wk}"`,
+          `"${r.auditor}"`,
+          `"${r.meli}"`,
+          `"${r.tipoProducto}"`,
+          `"${r.tipoDano}"`,
+          r.piezas,
+          r.valorUnitario,
+          r.costoTotal,
+          r.usd,
+          `"${r.is}"`,
+          `"${r.mu}"`,
+          `"${r.linea}"`,
+          `"${r.mesa}"`,
+          `"${r.responsableCI}"`,
+          `"${r.ldapMayus || r.ldap}"`,
+          `"${r.tl}"`,
+          `"${r.turno}"`,
+          `"${hasOmission360(r.determinacionCCM) ? 'SI' : 'NO'}"`,
+          `"${(r.determinacionCCM || '').replace(/"/g, '""')}"`
+        ].join(','))
+      ];
+
+      const blob = new Blob(['\uFEFF' + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `RootCheck_FastCheckDamage_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast(`Exportados ${filteredDataset.length} registros a CSV.`, 'success');
+    }
+
+    function toggleMobileNav() {
+      const nav = document.getElementById('sidebar-nav');
+      nav.classList.toggle('hidden');
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const colors = {
+        success: 'bg-emerald-900 text-white border-emerald-700',
+        error: 'bg-rose-900 text-white border-rose-700',
+        info: 'bg-slate-900 text-white border-slate-700'
+      };
+      const toast = document.createElement('div');
+      toast.className = `pointer-events-auto px-4 py-3 rounded-xl shadow-lg border text-xs font-medium flex items-center gap-2 transition-all ${colors[type] || colors.info}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    // =========================================================================
+    // 10. INICIALIZACIÓN
+    // =========================================================================
+    window.addEventListener('DOMContentLoaded', () => {
+      rawDataset = [...REAL_SHEET_DATA];
+      populateFilterOptions();
+      applyFilters();
+      lucide.createIcons();
+
+      // Si ya existe una URL guardada en localStorage, sincronizar automáticamente al abrir
+      const savedUrl = localStorage.getItem(STORAGE_KEY_URL);
+      if (savedUrl) {
+        const storedAuto = localStorage.getItem(STORAGE_KEY_AUTOREFRESH);
+        const isAuto = storedAuto === null ? true : storedAuto === 'true';
+        const headerCheckbox = document.getElementById('header-autorefresh-checkbox');
+        if (headerCheckbox) headerCheckbox.checked = isAuto;
+
+        setupAutoRefreshTimer();
+        syncFromSavedUrl(false);
+      }
+    });
+  </script>
+</body>
+</html>
